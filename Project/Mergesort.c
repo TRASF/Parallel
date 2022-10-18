@@ -1,5 +1,10 @@
-#include <mpi.h>
+/*
+Ref
+https://github.com/jkndrkn/erlang-mpi/blob/master/mergesort.c
+http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/mergeSort/mergeSort.html
+*/
 
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -88,7 +93,7 @@ int main(int argc, char *argv[])
 
     startTime = MPI_Wtime(); /* Start counting a runtime */
     int sendCount;
-    sendCount = globalSize / sizeWorld; /* Find the time that have to send */
+    sendCount = globalSize / sizeWorld; /* Find the time that have to send [ total run time (suppose) ]*/
     if (rankWorld == 0)                 /* Master task */
     {
         srandom(MPI_Wtime());

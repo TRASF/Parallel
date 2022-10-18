@@ -47,7 +47,7 @@ void *merge(int *A, int sizeA, int *B, int sizeB)
 
 void mergeSort(int *A, int left, int right)
 {
-    if (left == right)
+    if (left == right) /* min > max discard*/
         return;
     int *dummy;
     int mid = (left + right) / 2;
@@ -68,44 +68,45 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rankWorld);
     MPI_Comm_size(MPI_COMM_WORLD, &sizeWorld);
-    globalSize = atoi(argv[1]);
-    global = (int *)malloc(globalSize * sizeof(int));
-    for (i = 0; i < globalSize; i++)
+
+    globalSize = atoi(argv[1]); /* Get input from mpirun -np 4 ./sort 10000 < from here */
+
+    global = (int *)malloc(globalSize * sizeof(int)); /* Unsorted array for initial process */
+
+    for (i = 0; i < globalSize; i++) /* Put a random number in range of 0 - 9999 */
         global[i] = (rand() %
                      (9999 - 0 + 1)) +
                     0;
 
-    for (i = 0; i < 5; i++)
-        printf("%d ", global[i]);
-    printf("\n");
-    localSize = globalSize / sizeWorld;
-    local = (int *)malloc(localSize * sizeof(int));
+    // for (i = 0; i < 5; i++)
+    //     printf("%d ", global[i]); /* Print to test array sorted and random number is valid */
+    // printf("\n");
+    localSize = globalSize / sizeWorld;             /* Initiate a local length for local array */
+    local = (int *)malloc(localSize * sizeof(int)); /* For sorted [ Master and Worker will work with this ]*/
     MPI_Scatter(global, localSize, MPI_INT, local, localSize, MPI_INT, 0, MPI_COMM_WORLD);
-    srand(time(0));
+    srand(time(0)); /* for timer */
 
-    startTime = MPI_Wtime();
-    int s, r;
-    s = globalSize / sizeWorld;
-    r = globalSize % sizeWorld;
-    if (rankWorld == 0)
+    startTime = MPI_Wtime(); /* Start counting a runtime */
+    int sendCount;
+    sendCount = globalSize / sizeWorld; /* Find the time that have to send */
+    if (rankWorld == 0)                 /* Master task */
     {
         srandom(MPI_Wtime());
-        MPI_Scatter(global, s, MPI_INT, local, s, MPI_INT, 0, MPI_COMM_WORLD);
-        mergeSort(local, 0, s - 1);
+        MPI_Scatter(global, sendCount, MPI_INT, local, sendCount, MPI_INT, 0, MPI_COMM_WORLD);
+        mergeSort(local, 0, sendCount - 1);
     }
-    else
+    else /* Worker task */
     {
-        MPI_Scatter(global, s, MPI_INT, local, s, MPI_INT, 0, MPI_COMM_WORLD);
-        mergeSort(local, 0, s - 1);
+        MPI_Scatter(global, sendCount, MPI_INT, local, sendCount, MPI_INT, 0, MPI_COMM_WORLD);
+        mergeSort(local, 0, sendCount - 1);
     }
-    for (i = 0; i < 5; i++)
-        printf("%d ", local[i]);
-    printf("\n");
+    // for (i = 0; i < 5; i++)
+    //     printf("%d ", local[i]);
+    // printf("\n");
     MPI_Barrier(MPI_COMM_WORLD);
     stopTime = MPI_Wtime();
     if (rankWorld == 0)
     {
-
         printf("Start: %f End: %f Time consumed: %f\n", startTime, stopTime, stopTime - startTime);
         free(global);
     }

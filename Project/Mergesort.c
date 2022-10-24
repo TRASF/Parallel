@@ -8,7 +8,7 @@ http://selkie-macalester.org/csinparallel/modules/MPIProgramming/build/html/merg
 #include <stdio.h>
 #include <stdlib.h>
 
-double startTime, stopTime;
+double startTime, stopTime, masterTime, processTime, localTime;
 
 void *merge(int *A, int sizeA, int *B, int sizeB)
 {
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
     global = (int *)malloc(globalSize * sizeof(int)); /* Unsorted array for initial process */
 
-    for (i = 0; i < globalSize; i++) /* Put a random number in range of 0 - 9999 */
+    for (i = 0; i < globalSize; i++) /* Put a random numbers in range of 0 - 9999 */
         global[i] = (rand() %
                      (9999 - 0 + 1)) +
                     0;
@@ -96,23 +96,37 @@ int main(int argc, char *argv[])
     sendCount = globalSize / sizeWorld; /* Find the time that have to send [ total run time (suppose) ]*/
     if (rankWorld == 0)                 /* Master task */
     {
-        srandom(MPI_Wtime());
+        masterTime = MPI_Wtime();
+        MPI_Bcast(&sendCount, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Scatter(global, sendCount, MPI_INT, local, sendCount, MPI_INT, 0, MPI_COMM_WORLD);
         mergeSort(local, 0, sendCount - 1);
+        masterTime -= MPI_Wtime();
+        printf("Master took %f seconds \n",
+               , processTime);
     }
     else /* Worker task */
+
     {
+        processTime = MPI_Wtime();
+        MPI_Bcast(&sendCount, 1, MPI_INT, 0, MPI_COMM_WORLD);
         MPI_Scatter(global, sendCount, MPI_INT, local, sendCount, MPI_INT, 0, MPI_COMM_WORLD);
         mergeSort(local, 0, sendCount - 1);
+        processTime -= MPI_Wtime();
+        printf("Process #%d of %d took %f seconds \n",
+               rankWorld, sizeWorld, processTime);
     }
-    // for (i = 0; i < 5; i++)
-    //     printf("%d ", local[i]);
-    // printf("\n");
+
+    for (i = 0; i < localSize; i++)
+        printf("%d ", local[i]);
+    printf("\n");
+
     MPI_Barrier(MPI_COMM_WORLD);
-    stopTime = MPI_Wtime();
+    localTime = MPI_Wtime() - startTime;
+    MPI_Reduce(&localTime, &stopTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     if (rankWorld == 0)
     {
-        printf("Start: %f End: %f Time consumed: %f\n", startTime, stopTime, stopTime - startTime);
+        // printf("Start: %f End: %f Time consumed: %f\n", startTime, stopTime, stopTime - startTime);
+        printf("Time consumed: %f\n", stopTime);
         free(global);
     }
 

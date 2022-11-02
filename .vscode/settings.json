@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "*.scss": "scss",
-        "type_traits": "c"
-    }
-}
